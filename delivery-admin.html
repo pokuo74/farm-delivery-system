@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>送貨管理後台</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap');
+:root{
+  --soil:#2C1810;--bark:#5C3D2E;--hay:#C9A84C;--hay-light:#F5E6BC;
+  --grass:#4A7C59;--sky:#E8F4F0;--cream:#FAF6EE;--smoke:#F0EDE6;
+  --ink:#1A1208;--muted:#8A7560;--border:#DDD5C0;--red:#C0392B;
+  --blue:#1a73e8;--blue-light:#e8f0fe;
+  --shadow:0 2px 12px rgba(44,24,16,.10);--shadow-lg:0 8px 32px rgba(44,24,16,.15);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans TC',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh;padding-bottom:40px}
+header{background:var(--soil);position:sticky;top:0;z-index:100;box-shadow:0 2px 16px rgba(0,0,0,.25)}
+.header-inner{max-width:900px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-icon{width:36px;height:36px;background:var(--hay);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.logo-text h1{font-size:15px;font-weight:700;color:#fff}
+.logo-text p{font-size:11px;color:var(--hay-light)}
+.g-btn{display:flex;align-items:center;gap:7px;padding:7px 13px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:inherit;transition:all .2s;white-space:nowrap}
+.g-btn.off{background:rgba(255,255,255,.13);color:#ddd}
+.g-btn.off:hover{background:rgba(255,255,255,.22);color:#fff}
+.g-btn.on{background:#1e7e3e;color:#fff}
+.g-dot{width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.7}
+nav{background:var(--bark);display:flex;overflow-x:auto}
+nav::-webkit-scrollbar{display:none}
+.nav-inner{max-width:900px;margin:0 auto;display:flex;width:100%}
+.tab{padding:11px 20px;font-size:13px;font-weight:500;color:rgba(255,255,255,.65);cursor:pointer;border-bottom:3px solid transparent;transition:all .2s;white-space:nowrap;flex-shrink:0}
+.tab:hover{color:#fff}
+.tab.active{color:var(--hay);border-bottom-color:var(--hay);background:rgba(201,168,76,.1)}
+main{max-width:900px;margin:0 auto;padding:24px 16px}
+.page{display:none}.page.active{display:block}
+.card{background:#fff;border-radius:12px;border:1px solid var(--border);box-shadow:var(--shadow);padding:22px;margin-bottom:18px}
+.card-title{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.card-title::before{content:'';display:inline-block;width:3px;height:13px;background:var(--hay);border-radius:2px}
+input,select{padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;color:var(--ink);background:var(--smoke);outline:none}
+input:focus,select:focus{border-color:var(--hay);background:#fff}
+.btn{padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;border:none;font-family:inherit;transition:all .18s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--grass);color:#fff}
+.btn-primary:hover{background:#3a6647;transform:translateY(-1px)}
+.btn-secondary{background:var(--smoke);color:var(--muted);border:1.5px solid var(--border)}
+.btn-secondary:hover{background:var(--border);color:var(--ink)}
+.btn-danger{background:#fde8e8;color:var(--red);border:1.5px solid #f5c5c5}
+.btn-danger:hover{background:#f5b5b5}
+.btn-google{background:var(--blue);color:#fff}
+.btn-google:hover{background:#1557b0;transform:translateY(-1px)}
+.btn-google:disabled{background:#aaa;cursor:not-allowed;transform:none}
+.btn-sm{padding:7px 13px;font-size:12px}
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+.stat-box{background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center;box-shadow:var(--shadow)}
+.stat-num{font-family:'DM Mono',monospace;font-size:26px;font-weight:500;color:var(--soil)}
+.stat-label{font-size:11px;color:var(--muted);margin-top:3px}
+/* FILTER */
+.filter-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
+.filter-bar input{flex:1;min-width:150px}
+/* RECORDS */
+.record-list{display:flex;flex-direction:column;gap:10px}
+.rec-card{background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow);transition:box-shadow .2s}
+.rec-card:hover{box-shadow:var(--shadow-lg)}
+.rec-head{padding:13px 16px;display:flex;align-items:center;gap:10px;cursor:pointer}
+.rec-head:hover{background:var(--smoke)}
+.rec-id{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);background:var(--smoke);padding:3px 7px;border-radius:4px;flex-shrink:0}
+.rec-sup{font-size:14px;font-weight:600;color:var(--soil);flex:1}
+.rec-date{font-size:12px;color:var(--muted);flex-shrink:0}
+.rec-body{display:none;padding:0 16px 16px;border-top:1px solid var(--border)}
+.rec-body.open{display:block}
+.rec-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:100px;font-size:11px;font-weight:600}
+.badge-g{background:#d4edda;color:#1d6a33}
+.badge-b{background:var(--blue-light);color:var(--blue)}
+.rec-items{margin-top:10px}
+.rec-item{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px dashed var(--border);font-size:13px}
+.rec-item:last-child{border:none}
+.rec-qty{font-family:'DM Mono',monospace;color:var(--muted)}
+.rec-photos{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.rec-photo{width:72px;height:72px;border-radius:6px;object-fit:cover;border:2px solid var(--border);cursor:pointer;transition:transform .2s}
+.rec-photo:hover{transform:scale(1.06)}
+.rec-sig{margin-top:10px;background:var(--sky);border-radius:8px;padding:8px;border:1px solid var(--border)}
+.rec-sig img{max-height:70px;display:block}
+.rec-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+/* UPLOAD */
+.setup-box{background:#fffbeb;border:1.5px solid #fde68a;border-radius:12px;padding:18px;margin-bottom:18px}
+.setup-box h3{font-size:13px;color:#92400e;margin-bottom:8px}
+.setup-box p{font-size:13px;color:#78350f;margin-bottom:10px;line-height:1.6}
+.setup-row{display:flex;gap:8px;flex-wrap:wrap}
+.setup-row input{flex:1;min-width:200px;font-family:'DM Mono',monospace;font-size:12px}
+.login-needed{text-align:center;padding:18px;background:#fff8e1;border:1px dashed #fbbf24;border-radius:10px;font-size:13px;color:#7a5c00;margin-bottom:18px}
+.login-needed strong{display:block;margin-bottom:5px;font-size:14px}
+.upload-panel{background:var(--blue-light);border:1.5px solid #a8c7fa;border-radius:12px;padding:20px;margin-bottom:18px}
+.up-title{font-size:13px;font-weight:700;color:#1344a0;margin-bottom:14px}
+.up-row{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.up-row label{font-size:12px;color:#1344a0;font-weight:600;white-space:nowrap}
+.up-row input{padding:7px 10px;font-size:13px;flex:1;min-width:160px;background:#fff;border-color:#a8c7fa}
+.up-lbl{font-size:12px;color:#1344a0;font-weight:600;margin-bottom:8px}
+.up-opts{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.up-opt{display:flex;align-items:center;gap:6px;padding:8px 13px;border:1.5px solid #a8c7fa;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;font-weight:500;color:#1a56db;transition:all .2s;user-select:none}
+.up-opt input{display:none}
+.up-opt.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+/* PROGRESS */
+.prog-wrap{display:none;margin-top:14px}
+.prog-wrap.show{display:block}
+.prog-track{background:#c8d8f8;border-radius:100px;height:8px;overflow:hidden;margin-bottom:6px}
+.prog-bar{height:100%;background:var(--blue);border-radius:100px;transition:width .3s;width:0%}
+.prog-lbl{font-size:12px;color:#1344a0}
+/* SUCCESS UPLOAD */
+.upload-success{display:none;margin-top:14px;background:#d4edda;border:1px solid #a3d9a5;border-radius:10px;padding:14px 16px;align-items:center;gap:12px}
+.upload-success.show{display:flex}
+.upload-success-icon{font-size:28px}
+.upload-success-text strong{display:block;font-size:14px;color:#1d6a33;margin-bottom:3px}
+.upload-success-text span{font-size:12px;color:#2d8a40}
+/* LOG */
+.log-item{padding:10px 0;border-bottom:1px dashed var(--border);display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap}
+/* MODAL */
+.modal-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center;padding:16px}
+.modal-ov.open{display:flex}
+.modal{background:#fff;border-radius:14px;padding:26px;max-width:460px;width:100%;box-shadow:var(--shadow-lg)}
+.modal h3{font-size:16px;margin-bottom:12px;color:var(--soil)}
+.modal p{font-size:14px;color:var(--muted);margin-bottom:18px;line-height:1.6}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end}
+/* LIGHTBOX */
+#lb{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:9999;align-items:center;justify-content:center}
+#lb.open{display:flex}
+#lb img{max-width:92vw;max-height:86vh;border-radius:8px}
+#lb .lb-x{position:absolute;top:16px;right:20px;color:#fff;font-size:26px;cursor:pointer}
+/* TOAST */
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--ink);color:#fff;padding:11px 20px;border-radius:100px;font-size:14px;z-index:9999;transition:transform .3s;pointer-events:none;white-space:nowrap}
+#toast.show{transform:translateX(-50%) translateY(0)}
+#toast.ok{background:var(--grass)}
+#toast.err{background:var(--red)}
+.empty{text-align:center;padding:40px 20px;color:var(--muted)}
+.empty-icon{font-size:44px;margin-bottom:10px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-icon">🐄</div>
+      <div class="logo-text"><h1>送貨管理後台</h1><p>Admin Dashboard</p></div>
+    </div>
+    <button class="g-btn off" id="gBtn" onclick="handleAuth()">
+      <span class="g-dot"></span><span id="gTxt">連接 Google</span>
+    </button>
+  </div>
+  <nav><div class="nav-inner">
+    <div class="tab active" onclick="switchTab('history',this)">📋 歷史記錄</div>
+    <div class="tab" onclick="switchTab('upload',this)">☁️ 上傳 Drive</div>
+    <div class="tab" onclick="switchTab('export',this)">📤 備份匯出</div>
+  </div></nav>
+</header>
+
+<main>
+
+<!-- HISTORY -->
+<div class="page active" id="page-history">
+  <div class="stats-row">
+    <div class="stat-box"><div class="stat-num" id="sTotal">0</div><div class="stat-label">總筆數</div></div>
+    <div class="stat-box"><div class="stat-num" id="sMonth">0</div><div class="stat-label">本月</div></div>
+    <div class="stat-box"><div class="stat-num" id="sSup">0</div><div class="stat-label">廠商數</div></div>
+  </div>
+  <div class="filter-bar">
+    <input type="text" id="searchQ" placeholder="🔍 搜尋廠商、品項…" oninput="renderHistory()">
+    <input type="month" id="filterM" onchange="renderHistory()" style="padding:8px 12px;font-size:13px;background:#fff">
+    <button class="btn btn-secondary btn-sm" onclick="clearFilters()">清除</button>
+  </div>
+  <div class="record-list" id="recList"></div>
+</div>
+
+<!-- UPLOAD -->
+<div class="page" id="page-upload">
+  <div class="setup-box" id="setupBox">
+    <h3>⚙️ 填入 Google Client ID（只需一次）</h3>
+    <p>取得 OAuth Client ID 後貼入，點儲存後就永久記住，不需要再填。</p>
+    <div class="setup-row">
+      <input type="text" id="cidInput" placeholder="xxx.apps.googleusercontent.com">
+      <button class="btn btn-primary btn-sm" onclick="saveCid()">儲存</button>
+    </div>
+  </div>
+  <div class="login-needed" id="loginBox" style="display:none">
+    <strong>🔐 請先登入 Google 帳號</strong>
+    點右上角「連接 Google」按鈕授權後即可上傳。
+  </div>
+  <div class="upload-panel" id="upPanel" style="display:none">
+    <div class="up-title">☁️ 上傳到 Google Drive</div>
+    <div class="up-row">
+      <label>📁 資料夾名稱：</label>
+      <input type="text" id="folderName" value="農場簽收記錄">
+    </div>
+    <div class="up-lbl">上傳格式</div>
+    <div class="up-opts">
+      <label class="up-opt on" id="optJ"><input type="checkbox" checked onchange="toggleOpt(this,'optJ')"> 📋 JSON 完整備份</label>
+      <label class="up-opt on" id="optC"><input type="checkbox" checked onchange="toggleOpt(this,'optC')"> 📊 CSV 品項明細</label>
+    </div>
+    <div class="up-lbl">上傳範圍</div>
+    <div class="up-opts">
+      <label class="up-opt" id="rAll" onclick="setRange('all',this)">全部（<span id="cAll">0</span> 筆）</label>
+      <label class="up-opt on" id="rMonth" onclick="setRange('month',this)">本月（<span id="cMonth">0</span> 筆）</label>
+    </div>
+    <button class="btn btn-google" id="upBtn" onclick="uploadDrive()">☁️ 上傳到 Google Drive</button>
+    <div class="prog-wrap" id="progWrap">
+      <div class="prog-track"><div class="prog-bar" id="progBar"></div></div>
+      <div class="prog-lbl" id="progLbl">準備中…</div>
+    </div>
+    <!-- 上傳成功提示 -->
+    <div class="upload-success" id="upSuccess">
+      <div class="upload-success-icon">✅</div>
+      <div class="upload-success-text">
+        <strong>上傳完畢！</strong>
+        <span id="upSuccessDetail"></span>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">上傳記錄</div>
+    <div id="upLog" style="font-size:13px;color:var(--muted)">尚無上傳記錄</div>
+  </div>
+</div>
+
+<!-- EXPORT -->
+<div class="page" id="page-export">
+  <div class="card">
+    <div class="card-title">本機下載備份</div>
+    <p style="font-size:14px;color:var(--muted);margin-bottom:16px;line-height:1.7">下載到電腦做本機備份。</p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="dlJSON()">⬇ JSON 完整備份</button>
+      <button class="btn btn-secondary" onclick="dlCSV()">📊 CSV 品項明細</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">匯入備份還原</div>
+    <p style="font-size:14px;color:var(--muted);margin-bottom:12px;line-height:1.7">從 JSON 備份還原記錄。</p>
+    <input type="file" id="importFile" accept=".json" onchange="importJSON(this)" style="font-size:13px">
+  </div>
+  <div class="card">
+    <div class="card-title">危險區域</div>
+    <p style="font-size:14px;color:var(--muted);margin-bottom:12px">清除本機所有記錄，無法復原。</p>
+    <button class="btn btn-danger" onclick="confirmClear()">🗑 清除全部記錄</button>
+  </div>
+</div>
+
+</main>
+
+<div id="lb" onclick="this.classList.remove('open')"><span class="lb-x">✕</span><img id="lbImg" src="" alt=""></div>
+<div class="modal-ov" id="modal">
+  <div class="modal">
+    <h3 id="mTitle"></h3><p id="mBody"></p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+      <button class="btn btn-danger" id="mOk">確認</button>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+const SK='farm_records',LK='farm_upload_log',CK='farm_cid';
+let records=[],gToken=null,gEmail='',uploadRange='month';
+
+function init(){
+  try{records=JSON.parse(localStorage.getItem(SK)||'[]')}catch(e){}
+  // Load saved CID
+  const cid=localStorage.getItem(CK)||'';
+  if(cid){document.getElementById('cidInput').value=cid;document.getElementById('setupBox').style.display='none'}
+  renderHistory();updateStats();renderUpLog();updateCounts();
+}
+
+// TABS
+function switchTab(tab,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+tab).classList.add('active');el.classList.add('active');
+  if(tab==='upload'){updateUpPanel();updateCounts()}
+}
+
+// GOOGLE AUTH
+function getCid(){return localStorage.getItem(CK)||''}
+function saveCid(){
+  const v=document.getElementById('cidInput').value.trim();
+  if(!v){toast('請填入 Client ID','err');return}
+  localStorage.setItem(CK,v);
+  document.getElementById('setupBox').style.display='none';
+  toast('✅ Client ID 已儲存','ok');
+}
+function handleAuth(){
+  if(gToken){showConfirm('登出 Google',`確定要登出 ${gEmail} 嗎？`,()=>{gToken=null;gEmail='';updateG(false);updateUpPanel();toast('已登出 Google')});return}
+  const cid=getCid();
+  if(!cid){toast('請先填入 Client ID','err');return}
+  try{
+    const client=google.accounts.oauth2.initTokenClient({
+      client_id:cid,scope:'https://www.googleapis.com/auth/drive.file',
+      callback:async r=>{
+        if(r.access_token){
+          gToken=r.access_token;
+          try{const u=await(await fetch('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{Authorization:'Bearer '+gToken}})).json();gEmail=u.email||'Google 用戶'}catch(e){}
+          updateG(true);updateUpPanel();toast('✅ 已登入 '+gEmail,'ok');
+        }else{toast('登入失敗','err')}
+      }
+    });client.requestAccessToken();
+  }catch(e){toast('Google 載入中，請稍後','err')}
+}
+function updateG(on){
+  const b=document.getElementById('gBtn');
+  b.className='g-btn '+(on?'on':'off');
+  document.getElementById('gTxt').textContent=on?(gEmail||'已連接'):'連接 Google';
+}
+function updateUpPanel(){
+  const hasCid=!!getCid();
+  document.getElementById('setupBox').style.display=hasCid?'none':'block';
+  document.getElementById('loginBox').style.display=(hasCid&&!gToken)?'block':'none';
+  document.getElementById('upPanel').style.display=(hasCid&&gToken)?'block':'none';
+}
+
+// UPLOAD
+function toggleOpt(cb,id){document.getElementById(id).classList[cb.checked?'add':'remove']('on')}
+function setRange(r,el){
+  uploadRange=r;
+  ['rAll','rMonth'].forEach(id=>document.getElementById(id).classList.remove('on'));
+  el.classList.add('on');
+}
+function updateCounts(){
+  const ym=new Date().toISOString().slice(0,7);
+  document.getElementById('cAll').textContent=records.length;
+  document.getElementById('cMonth').textContent=records.filter(r=>r.date.startsWith(ym)).length;
+}
+function getRangeData(){
+  if(uploadRange==='all')return records;
+  const ym=new Date().toISOString().slice(0,7);
+  return records.filter(r=>r.date.startsWith(ym));
+}
+function setProg(p,lbl){document.getElementById('progBar').style.width=p+'%';document.getElementById('progLbl').textContent=lbl}
+
+async function uploadDrive(){
+  if(!gToken){toast('請先登入 Google','err');return}
+  const doJ=document.querySelector('#optJ input').checked;
+  const doC=document.querySelector('#optC input').checked;
+  if(!doJ&&!doC){toast('請至少選一種格式','err');return}
+  const folder=document.getElementById('folderName').value.trim()||'農場簽收記錄';
+  const data=getRangeData();
+  if(!data.length){toast('沒有可上傳的記錄','err');return}
+
+  // Reset success box
+  document.getElementById('upSuccess').classList.remove('show');
+  const prog=document.getElementById('progWrap');
+  prog.classList.add('show');
+  document.getElementById('upBtn').disabled=true;
+
+  try{
+    setProg(10,'建立資料夾…');
+    const fid=await getOrCreateFolder(folder);
+    const ts=new Date().toISOString().slice(0,16).replace('T','_').replace(':','');
+    const uploaded=[];
+
+    if(doJ){
+      setProg(35,'上傳 JSON…');
+      const fname=`簽收備份_${ts}.json`;
+      await uploadFile(fid,fname,JSON.stringify(data,null,2),'application/json');
+      uploaded.push(fname);setProg(65,'JSON 完成');
+    }
+    if(doC){
+      setProg(doJ?75:40,'上傳 CSV…');
+      const fname=`品項明細_${ts}.csv`;
+      await uploadFile(fid,fname,'\uFEFF'+buildCSV(data),'text/csv');
+      uploaded.push(fname);setProg(95,'CSV 完成');
+    }
+
+    setProg(100,'完成！');
+    addUpLog(uploaded,folder,data.length);
+
+    // 顯示成功訊息
+    setTimeout(()=>{
+      prog.classList.remove('show');
+      document.getElementById('upBtn').disabled=false;
+      const detail=`上傳了 ${uploaded.length} 個檔案，共 ${data.length} 筆記錄到「${folder}」`;
+      document.getElementById('upSuccessDetail').textContent=detail;
+      document.getElementById('upSuccess').classList.add('show');
+      toast('✅ 上傳完畢！','ok');
+    },800);
+
+  }catch(e){
+    setProg(0,'');prog.classList.remove('show');
+    document.getElementById('upBtn').disabled=false;
+    toast('上傳失敗：'+(e.message||'請確認授權'),'err');
+  }
+}
+
+async function getOrCreateFolder(name){
+  const q=encodeURIComponent(`name='${name}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+  const r=await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)`,{headers:{Authorization:'Bearer '+gToken}});
+  const d=await r.json();
+  if(d.files&&d.files.length)return d.files[0].id;
+  const cr=await fetch('https://www.googleapis.com/drive/v3/files',{method:'POST',headers:{Authorization:'Bearer '+gToken,'Content-Type':'application/json'},body:JSON.stringify({name,mimeType:'application/vnd.google-apps.folder'})});
+  const f=await cr.json();if(!f.id)throw new Error('無法建立資料夾');return f.id;
+}
+async function uploadFile(fid,name,content,mime){
+  const b='bound'+Date.now();
+  const meta=JSON.stringify({name,parents:[fid]});
+  const body=`--${b}\r\nContent-Type:application/json;charset=UTF-8\r\n\r\n${meta}\r\n--${b}\r\nContent-Type:${mime}\r\n\r\n${content}\r\n--${b}--`;
+  const r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',{method:'POST',headers:{Authorization:'Bearer '+gToken,'Content-Type':`multipart/related;boundary=${b}`},body});
+  const d=await r.json();if(!d.id)throw new Error('上傳失敗');return d.id;
+}
+function buildCSV(data){
+  let c='記錄編號,廠商,送貨員,日期,單號,品項,數量,單位,備註\n';
+  data.forEach(r=>{
+    if(r.items.length){r.items.forEach(i=>{c+=`"${r.id}","${r.supplier}","${r.driver}","${r.date}","${r.orderNo||''}","${i.name}","${i.qty}","${i.unit}","${r.notes||''}"\n`})}
+    else{c+=`"${r.id}","${r.supplier}","${r.driver}","${r.date}","${r.orderNo||''}","","","","${r.notes||''}"\n`}
+  });return c;
+}
+function addUpLog(files,folder,count){
+  let logs=[];try{logs=JSON.parse(localStorage.getItem(LK)||'[]')}catch(e){}
+  logs.unshift({time:new Date().toISOString(),folder,count,files,user:gEmail});
+  if(logs.length>20)logs=logs.slice(0,20);
+  localStorage.setItem(LK,JSON.stringify(logs));renderUpLog();
+}
+function renderUpLog(){
+  let logs=[];try{logs=JSON.parse(localStorage.getItem(LK)||'[]')}catch(e){}
+  const el=document.getElementById('upLog');
+  if(!logs.length){el.textContent='尚無上傳記錄';return}
+  el.innerHTML=logs.map(l=>`
+    <div class="log-item">
+      <span class="badge badge-b">☁️ ${l.files.length} 檔</span>
+      <div style="flex:1;min-width:160px">
+        <div style="font-weight:600;color:var(--ink);font-size:13px">📁 ${l.folder} — ${l.count} 筆</div>
+        <div style="color:var(--muted);font-size:12px;margin-top:2px">${l.files.join('、')}</div>
+        <div style="color:var(--muted);font-size:11px;margin-top:2px">${new Date(l.time).toLocaleString('zh-TW')} ∙ ${l.user||''}</div>
+      </div>
+    </div>`).join('');
+}
+
+// HISTORY
+function renderHistory(){
+  const q=(document.getElementById('searchQ')?.value||'').toLowerCase();
+  const m=document.getElementById('filterM')?.value||'';
+  const list=document.getElementById('recList');list.innerHTML='';
+  const filtered=records.filter(r=>(!q||(r.supplier+r.driver+(r.notes||'')+r.items.map(i=>i.name).join()).toLowerCase().includes(q))&&(!m||r.date.startsWith(m)));
+  if(!filtered.length){list.innerHTML='<div class="empty"><div class="empty-icon">📭</div><p>沒有符合的記錄</p></div>';return}
+  filtered.forEach(r=>{
+    const c=document.createElement('div');c.className='rec-card';
+    c.innerHTML=`
+      <div class="rec-head" onclick="this.nextElementSibling.classList.toggle('open')">
+        <span class="rec-id">${r.id}</span>
+        <span class="rec-sup">${r.supplier}</span>
+        <span class="rec-date">${r.date}</span>
+        <span style="color:var(--muted)">▾</span>
+      </div>
+      <div class="rec-body">
+        <div class="rec-meta"><span class="badge badge-g">✓ 已簽收</span><span style="font-size:12px;color:var(--muted)">送貨員：${r.driver}</span>${r.orderNo?`<span style="font-size:12px;color:var(--muted)">單號：${r.orderNo}</span>`:''}</div>
+        <div class="rec-items">${r.items.map(i=>`<div class="rec-item"><span>${i.name}</span><span class="rec-qty">${i.qty} ${i.unit}</span></div>`).join('')}</div>
+        ${r.notes?`<div style="margin-top:10px;font-size:13px;color:var(--muted);background:var(--smoke);padding:8px 12px;border-radius:6px">備註：${r.notes}</div>`:''}
+        ${r.photos&&r.photos.length?`<div class="rec-photos">${r.photos.slice(0,5).map(p=>`<img class="rec-photo" src="${p}" onclick="openLb('${p}')">`).join('')}</div>`:''}
+        ${r.signature?`<div class="rec-sig"><div style="font-size:11px;color:var(--muted);margin-bottom:4px">簽名</div><img src="${r.signature}"></div>`:''}
+        <div class="rec-actions"><button class="btn btn-danger btn-sm" onclick="delRec('${r.id}')">🗑 刪除</button></div>
+      </div>`;
+    list.appendChild(c);
+  });
+}
+function clearFilters(){document.getElementById('searchQ').value='';document.getElementById('filterM').value='';renderHistory()}
+function updateStats(){
+  document.getElementById('sTotal').textContent=records.length;
+  const ym=new Date().toISOString().slice(0,7);
+  document.getElementById('sMonth').textContent=records.filter(r=>r.date.startsWith(ym)).length;
+  document.getElementById('sSup').textContent=new Set(records.map(r=>r.supplier)).size;
+}
+function delRec(id){
+  showConfirm('刪除記錄','確定要刪除這筆記錄嗎？',()=>{
+    records=records.filter(r=>r.id!==id);localStorage.setItem(SK,JSON.stringify(records));
+    renderHistory();updateStats();updateCounts();toast('記錄已刪除');
+  });
+}
+function openLb(s){document.getElementById('lbImg').src=s;document.getElementById('lb').classList.add('open')}
+
+// EXPORT
+function dlJSON(){const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob([JSON.stringify(records,null,2)],{type:'application/json'})),download:`farm_${new Date().toISOString().slice(0,10)}.json`});a.click();toast('JSON 下載中','ok')}
+function dlCSV(){const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob(['\uFEFF'+buildCSV(records)],{type:'text/csv;charset=utf-8'})),download:`farm_items_${new Date().toISOString().slice(0,10)}.csv`});a.click();toast('CSV 下載中','ok')}
+function importJSON(inp){
+  const f=inp.files[0];if(!f)return;
+  const r=new FileReader();r.onload=e=>{
+    try{const d=JSON.parse(e.target.result);if(!Array.isArray(d))throw 1;
+      showConfirm('匯入確認',`確定匯入 ${d.length} 筆？（重複 ID 不覆蓋）`,()=>{
+        const ids=new Set(records.map(r=>r.id));const news=d.filter(r=>!ids.has(r.id));
+        records=[...news,...records];localStorage.setItem(SK,JSON.stringify(records));
+        renderHistory();updateStats();updateCounts();toast(`✅ 匯入 ${news.length} 筆`,'ok');
+      });
+    }catch(e){toast('格式錯誤','err')}
+  };r.readAsText(f);inp.value='';
+}
+function confirmClear(){showConfirm('清除全部','確定清除所有本機記錄？請先備份！',()=>{records=[];localStorage.setItem(SK,'[]');renderHistory();updateStats();updateCounts();toast('已清除')})}
+
+// MODAL
+let mCb=null;
+function showConfirm(title,body,cb){document.getElementById('mTitle').textContent=title;document.getElementById('mBody').textContent=body;mCb=cb;document.getElementById('modal').classList.add('open');document.getElementById('mOk').onclick=()=>{closeModal();if(mCb)mCb()}}
+function closeModal(){document.getElementById('modal').classList.remove('open')}
+
+let tTimer;
+function toast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.className=type?`show ${type}`:'show';clearTimeout(tTimer);tTimer=setTimeout(()=>{t.className=''},2800)}
+
+init();
+</script>
+</body>
+</html>

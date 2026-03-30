@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>送貨簽收</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap');
+:root{
+  --soil:#2C1810;--bark:#5C3D2E;--hay:#C9A84C;--hay-light:#F5E6BC;
+  --grass:#4A7C59;--sky:#E8F4F0;--cream:#FAF6EE;--smoke:#F0EDE6;
+  --ink:#1A1208;--muted:#8A7560;--border:#DDD5C0;--red:#C0392B;
+  --blue:#1a73e8;
+  --shadow:0 2px 12px rgba(44,24,16,.10);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans TC',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh;padding-bottom:40px}
+header{background:var(--soil);padding:16px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.3)}
+.logo-icon{width:36px;height:36px;background:var(--hay);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.logo-text h1{font-size:15px;font-weight:700;color:#fff}
+.logo-text p{font-size:11px;color:var(--hay-light)}
+.date-badge{margin-left:auto;font-family:'DM Mono',monospace;font-size:11px;color:var(--hay-light);text-align:right}
+main{max-width:600px;margin:0 auto;padding:20px 16px}
+.card{background:#fff;border-radius:12px;border:1px solid var(--border);box-shadow:var(--shadow);padding:20px;margin-bottom:16px}
+.card-title{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.card-title::before{content:'';display:inline-block;width:3px;height:13px;background:var(--hay);border-radius:2px}
+.form-group{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.form-group:last-child{margin-bottom:0}
+label{font-size:12px;font-weight:500;color:var(--muted)}
+input,select,textarea{padding:11px 13px;border:1.5px solid var(--border);border-radius:8px;font-size:15px;font-family:inherit;color:var(--ink);background:var(--smoke);outline:none;transition:border-color .2s,box-shadow .2s;width:100%}
+input:focus,select:focus,textarea:focus{border-color:var(--hay);box-shadow:0 0 0 3px rgba(201,168,76,.15);background:#fff}
+textarea{resize:vertical;min-height:70px}
+.required{color:var(--red);margin-left:2px}
+.items-hd{display:grid;grid-template-columns:2fr 1fr 1fr 36px;gap:6px;padding-bottom:6px;border-bottom:1px solid var(--border);margin-bottom:8px}
+.items-hd span{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px}
+.item-row{display:grid;grid-template-columns:2fr 1fr 1fr 36px;gap:6px;align-items:center;margin-bottom:8px}
+.item-row input{padding:9px 10px;font-size:14px}
+.btn-rm{width:32px;height:32px;border:none;border-radius:6px;background:#fde8e8;color:var(--red);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.btn-rm:hover{background:#f5b5b5}
+.btn-add{margin-top:8px;padding:9px 14px;border:1.5px dashed #7DB08A;border-radius:8px;background:none;color:var(--grass);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;width:100%;transition:all .2s}
+.btn-add:hover{background:var(--sky)}
+.photo-zone{border:2px dashed var(--border);border-radius:12px;padding:28px 20px;text-align:center;cursor:pointer;position:relative;background:var(--smoke);transition:all .2s}
+.photo-zone:hover{border-color:var(--hay);background:var(--hay-light)}
+.photo-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;border:none;background:none;padding:0}
+.photo-zone-icon{font-size:32px;margin-bottom:6px}
+.photo-zone-text{font-size:14px;color:var(--muted)}
+.photo-zone-hint{font-size:12px;color:#b0a090;margin-top:3px}
+.photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px;margin-top:12px}
+.photo-thumb{position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;border:2px solid var(--border)}
+.photo-thumb img{width:100%;height:100%;object-fit:cover}
+.photo-thumb .rm-ph{position:absolute;top:3px;right:3px;width:20px;height:20px;background:rgba(0,0,0,.65);color:#fff;border-radius:50%;border:none;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.sig-wrap{position:relative}
+#sigCanvas{width:100%;height:130px;border:1.5px solid var(--border);border-radius:8px;background:var(--smoke);cursor:crosshair;display:block;touch-action:none}
+#sigCanvas.signed{border-color:var(--grass);background:var(--sky)}
+.sig-hint{font-size:12px;color:var(--muted);position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;transition:opacity .3s}
+.sig-hint.hidden{opacity:0}
+.sig-clear{margin-top:8px;padding:7px 14px;border:1.5px solid var(--border);border-radius:8px;background:var(--smoke);color:var(--muted);font-size:12px;font-weight:500;cursor:pointer;font-family:inherit}
+.btn-submit{width:100%;padding:16px;background:var(--grass);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;margin-top:8px;letter-spacing:.5px}
+.btn-submit:hover{background:#3a6647;transform:translateY(-1px);box-shadow:0 6px 20px rgba(74,124,89,.35)}
+.btn-submit:disabled{background:#aaa;cursor:not-allowed;transform:none;box-shadow:none}
+
+/* SUCCESS OVERLAY */
+#successOverlay{display:none;position:fixed;inset:0;background:rgba(26,18,8,.85);z-index:9999;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:24px}
+#successOverlay.show{display:flex}
+.success-box{background:#fff;border-radius:20px;padding:32px 24px;max-width:360px;width:100%}
+.success-icon{font-size:52px;margin-bottom:10px;animation:pop .4s ease}
+@keyframes pop{0%{transform:scale(0)}70%{transform:scale(1.15)}100%{transform:scale(1)}}
+.success-title{font-size:20px;font-weight:700;color:var(--grass);margin-bottom:6px}
+.success-sub{font-size:13px;color:var(--muted);margin-bottom:16px}
+.success-info{background:var(--sky);border-radius:10px;padding:12px 14px;text-align:left;margin-bottom:16px}
+.success-info-row{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px dashed var(--border)}
+.success-info-row:last-child{border:none}
+.success-info-label{color:var(--muted)}
+.success-info-val{font-weight:600;color:var(--ink)}
+
+/* UPLOAD BUTTON IN SUCCESS */
+.btn-upload{width:100%;padding:14px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s}
+.btn-upload:hover{background:#1557b0;transform:translateY(-1px)}
+.btn-upload:disabled{background:#aaa;cursor:not-allowed;transform:none}
+
+/* UPLOAD STATUS */
+.upload-status{margin-bottom:12px;border-radius:10px;padding:12px 14px;font-size:13px;display:none}
+.upload-status.show{display:block}
+.upload-status.uploading{background:#e8f0fe;border:1px solid #a8c7fa;color:#1344a0}
+.upload-status.done{background:#d4edda;border:1px solid #a3d9a5;color:#1d6a33;font-weight:600}
+.upload-status.error{background:#fde8e8;border:1px solid #f5c5c5;color:var(--red)}
+
+/* PROGRESS */
+.prog-track{background:#c8d8f8;border-radius:100px;height:6px;overflow:hidden;margin-top:8px}
+.prog-bar{height:100%;background:var(--blue);border-radius:100px;transition:width .3s;width:0%}
+
+.btn-new{width:100%;padding:12px;background:var(--smoke);color:var(--muted);border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+.btn-new:hover{background:var(--border);color:var(--ink)}
+
+/* TOAST */
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--red);color:#fff;padding:11px 20px;border-radius:100px;font-size:14px;z-index:99999;transition:transform .3s;pointer-events:none;white-space:nowrap}
+#toast.show{transform:translateX(-50%) translateY(0)}
+/* LIGHTBOX */
+#lb{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:9999;align-items:center;justify-content:center}
+#lb.open{display:flex}
+#lb img{max-width:94vw;max-height:88vh;border-radius:8px}
+#lb .lb-x{position:absolute;top:16px;right:18px;color:#fff;font-size:26px;cursor:pointer}
+</style>
+</head>
+<body>
+
+<!-- 填入你的 Apps Script 網址 -->
+<script>
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbytP8MEJdwpBGYpGXIoEgOXXWqX-d7gv_3dkhhFIkSqkNF9VhKjwGvTqBKFz4e8yrhb/exec';
+const DRIVE_FOLDER = '農場簽收記錄';
+</script>
+
+<header>
+  <div class="logo-icon">🐄</div>
+  <div class="logo-text">
+    <h1>送貨簽收</h1>
+    <p>Delivery Receipt</p>
+  </div>
+  <div class="date-badge" id="dateBadge"></div>
+</header>
+
+<main>
+  <div class="card">
+    <div class="card-title">送貨資訊</div>
+    <div class="form-group">
+      <label>送貨廠商 <span class="required">*</span></label>
+      <input type="text" id="supplier" placeholder="廠商名稱">
+    </div>
+    <div class="form-group">
+      <label>送貨員姓名 <span class="required">*</span></label>
+      <input type="text" id="driver" placeholder="姓名">
+    </div>
+    <div class="form-group">
+      <label>送貨日期 <span class="required">*</span></label>
+      <input type="date" id="date">
+    </div>
+    <div class="form-group">
+      <label>送貨單號</label>
+      <input type="text" id="orderNo" placeholder="廠商單號（選填）">
+    </div>
+    <div class="form-group">
+      <label>備註</label>
+      <textarea id="notes" placeholder="貨品狀況或特殊說明…"></textarea>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">送貨品項</div>
+    <div class="items-hd"><span>品項</span><span>數量</span><span>單位</span><span></span></div>
+    <div id="itemRows"></div>
+    <button class="btn-add" onclick="addItem()">＋ 新增品項</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">商品照片</div>
+    <div class="photo-zone">
+      <input type="file" id="photoInput" accept="image/*" multiple onchange="handlePhotos(this)">
+      <div class="photo-zone-icon">📷</div>
+      <div class="photo-zone-text">點此拍照或上傳</div>
+      <div class="photo-zone-hint">可多張上傳</div>
+    </div>
+    <div class="photo-grid" id="photoGrid"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">送貨員簽名 <span class="required">*</span></div>
+    <div class="sig-wrap">
+      <canvas id="sigCanvas" width="600" height="130"></canvas>
+      <div class="sig-hint" id="sigHint">請在此處簽名</div>
+    </div>
+    <button class="sig-clear" onclick="clearSig()">🗑 清除重簽</button>
+  </div>
+
+  <button class="btn-submit" id="submitBtn" onclick="submit()">✅ 確認送貨完成</button>
+</main>
+
+<!-- SUCCESS OVERLAY -->
+<div id="successOverlay">
+  <div class="success-box">
+    <div class="success-icon">✅</div>
+    <div class="success-title">簽收完成！</div>
+    <div class="success-sub">請點下方按鈕上傳到雲端</div>
+    <div class="success-info" id="successInfo"></div>
+
+    <!-- 上傳狀態 -->
+    <div class="upload-status" id="upStatus"></div>
+
+    <!-- 上傳按鈕 -->
+    <button class="btn-upload" id="upBtn" onclick="uploadToDrive()">
+      ☁️ 上傳到 Google Drive
+    </button>
+
+    <button class="btn-new" onclick="newRecord()">填寫下一筆</button>
+  </div>
+</div>
+
+<div id="lb" onclick="this.classList.remove('open')"><span class="lb-x">✕</span><img id="lbImg" src="" alt=""></div>
+<div id="toast"></div>
+
+<script>
+const SK = 'farm_records';
+let photos = [], drawing = false, hasSig = false, sigCtx, sigCanvas, itemCnt = 0;
+let currentRecord = null;
+
+function init() {
+  const now = new Date();
+  document.getElementById('dateBadge').textContent = now.toLocaleDateString('zh-TW', {month:'long',day:'numeric',weekday:'short'});
+  document.getElementById('date').value = now.toISOString().slice(0,10);
+  addItem();
+  initSig();
+}
+
+// ITEMS
+function addItem() {
+  itemCnt++;
+  const id = itemCnt;
+  const row = document.createElement('div');
+  row.className = 'item-row'; row.id = 'it-' + id;
+  row.innerHTML = `<input type="text" placeholder="品項名稱" class="it-name"><input type="number" placeholder="0" min="0" class="it-qty" style="text-align:center"><input type="text" placeholder="包/袋/kg" class="it-unit"><button class="btn-rm" onclick="rmItem(${id})">✕</button>`;
+  document.getElementById('itemRows').appendChild(row);
+}
+function rmItem(id) { const e = document.getElementById('it-' + id); if (e) e.remove(); }
+function getItems() {
+  return Array.from(document.querySelectorAll('.item-row')).map(r => ({
+    name: r.querySelector('.it-name').value.trim(),
+    qty: r.querySelector('.it-qty').value.trim() || '—',
+    unit: r.querySelector('.it-unit').value.trim() || '—'
+  })).filter(i => i.name);
+}
+
+// PHOTOS
+function handlePhotos(inp) {
+  Array.from(inp.files).forEach(f => {
+    const img = new Image(); const url = URL.createObjectURL(f);
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const MAX = 1200; let w = img.width, h = img.height;
+      if (w > MAX) { h = h * (MAX / w); w = MAX; }
+      if (h > MAX) { w = w * (MAX / h); h = MAX; }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      photos.push(canvas.toDataURL('image/jpeg', 0.7));
+      renderPhotos(); URL.revokeObjectURL(url);
+    }; img.src = url;
+  }); inp.value = '';
+}
+function renderPhotos() {
+  document.getElementById('photoGrid').innerHTML = photos.map((s, i) =>
+    `<div class="photo-thumb"><img src="${s}" onclick="openLb('${s}')"><button class="rm-ph" onclick="rmPhoto(${i})">✕</button></div>`
+  ).join('');
+}
+function rmPhoto(i) { photos.splice(i, 1); renderPhotos(); }
+function openLb(s) { document.getElementById('lbImg').src = s; document.getElementById('lb').classList.add('open'); }
+
+// SIGNATURE
+function initSig() {
+  sigCanvas = document.getElementById('sigCanvas');
+  sigCtx = sigCanvas.getContext('2d');
+  sigCtx.strokeStyle = '#2C1810'; sigCtx.lineWidth = 2.5; sigCtx.lineCap = 'round'; sigCtx.lineJoin = 'round';
+  const gp = e => {
+    const r = sigCanvas.getBoundingClientRect(), sx = sigCanvas.width / r.width, sy = sigCanvas.height / r.height;
+    return e.touches ? {x:(e.touches[0].clientX-r.left)*sx,y:(e.touches[0].clientY-r.top)*sy} : {x:(e.clientX-r.left)*sx,y:(e.clientY-r.top)*sy};
+  };
+  const start = e => { e.preventDefault(); drawing = true; const p = gp(e); sigCtx.beginPath(); sigCtx.moveTo(p.x, p.y); };
+  const move = e => { e.preventDefault(); if (!drawing) return; const p = gp(e); sigCtx.lineTo(p.x, p.y); sigCtx.stroke(); if (!hasSig) { hasSig = true; sigCanvas.classList.add('signed'); document.getElementById('sigHint').classList.add('hidden'); } };
+  const end = () => { drawing = false; };
+  sigCanvas.addEventListener('mousedown', start); sigCanvas.addEventListener('mousemove', move); sigCanvas.addEventListener('mouseup', end); sigCanvas.addEventListener('mouseleave', end);
+  sigCanvas.addEventListener('touchstart', start, {passive:false}); sigCanvas.addEventListener('touchmove', move, {passive:false}); sigCanvas.addEventListener('touchend', end);
+}
+function clearSig() { sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height); hasSig = false; sigCanvas.classList.remove('signed'); document.getElementById('sigHint').classList.remove('hidden'); }
+
+// SUBMIT — 先存本機，然後顯示成功畫面
+function submit() {
+  const sup = document.getElementById('supplier').value.trim();
+  const drv = document.getElementById('driver').value.trim();
+  const dt = document.getElementById('date').value;
+  if (!sup) { toast('請填寫廠商名稱'); return; }
+  if (!drv) { toast('請填寫送貨員姓名'); return; }
+  if (!dt) { toast('請選擇送貨日期'); return; }
+  if (!hasSig) { toast('請完成送貨員簽名'); return; }
+  const items = getItems();
+  if (!items.length) { toast('請至少填寫一項品項'); return; }
+
+  // 存本機
+  let records = []; try { records = JSON.parse(localStorage.getItem(SK) || '[]'); } catch(e) {}
+  currentRecord = {
+    id: 'DEL-' + Date.now(), supplier: sup, driver: drv, date: dt,
+    orderNo: document.getElementById('orderNo').value.trim(),
+    notes: document.getElementById('notes').value.trim(),
+    items, photos: [...photos],
+    signature: sigCanvas.toDataURL('image/png'),
+    createdAt: new Date().toISOString()
+  };
+  records.unshift(currentRecord);
+  localStorage.setItem(SK, JSON.stringify(records));
+
+  // 顯示成功畫面
+  document.getElementById('successInfo').innerHTML = `
+    <div class="success-info-row"><span class="success-info-label">廠商</span><span class="success-info-val">${sup}</span></div>
+    <div class="success-info-row"><span class="success-info-label">送貨員</span><span class="success-info-val">${drv}</span></div>
+    <div class="success-info-row"><span class="success-info-label">日期</span><span class="success-info-val">${dt}</span></div>
+    <div class="success-info-row"><span class="success-info-label">品項數</span><span class="success-info-val">${items.length} 項</span></div>
+    <div class="success-info-row"><span class="success-info-label">照片</span><span class="success-info-val">${photos.length} 張</span></div>
+  `;
+  // 重置上傳狀態
+  setUpStatus('', '');
+  document.getElementById('upBtn').disabled = false;
+  document.getElementById('upBtn').textContent = '☁️ 上傳到 Google Drive';
+  document.getElementById('successOverlay').classList.add('show');
+}
+
+// UPLOAD TO DRIVE via Apps Script
+async function uploadToDrive() {
+  if (!currentRecord) return;
+  const btn = document.getElementById('upBtn');
+  btn.disabled = true;
+  btn.textContent = '上傳中…';
+  setUpStatus('uploading', '⏳ 正在上傳到 Google Drive…');
+
+  const ts = new Date().toISOString().slice(0,16).replace('T','_').replace(':','');
+  const fname = `簽收_${currentRecord.supplier}_${ts}`;
+
+  try {
+    // 上傳 JSON
+    setUpStatus('uploading', '⏳ 上傳資料中（1/2）…');
+    await postToScript({
+      folderName: DRIVE_FOLDER,
+      fileName: fname + '.json',
+      fileContent: btoa(unescape(encodeURIComponent(JSON.stringify(currentRecord, null, 2)))),
+      mimeType: 'application/json'
+    });
+
+    // 上傳 CSV
+    setUpStatus('uploading', '⏳ 上傳明細中（2/2）…');
+    const csv = '品項,數量,單位\n' + currentRecord.items.map(i => `"${i.name}","${i.qty}","${i.unit}"`).join('\n');
+    await postToScript({
+      folderName: DRIVE_FOLDER,
+      fileName: fname + '.csv',
+      fileContent: btoa(unescape(encodeURIComponent('\uFEFF' + csv))),
+      mimeType: 'text/csv'
+    });
+
+    // 成功！
+    setUpStatus('done', `✅ 上傳完畢！已存入 Google Drive「${DRIVE_FOLDER}」資料夾`);
+    btn.textContent = '✅ 已上傳';
+    btn.style.background = '#1e7e3e';
+
+  } catch(e) {
+    setUpStatus('error', '❌ 上傳失敗：' + (e.message || '請確認網路連線'));
+    btn.disabled = false;
+    btn.textContent = '☁️ 重試上傳';
+  }
+}
+
+async function postToScript(payload) {
+  const res = await fetch(APPS_SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+  const text = await res.text();
+  let data;
+  try { data = JSON.parse(text); } catch(e) { throw new Error('伺服器回應異常'); }
+  if (!data.success) throw new Error(data.error || '上傳失敗');
+  return data;
+}
+
+function setUpStatus(type, msg) {
+  const el = document.getElementById('upStatus');
+  el.className = 'upload-status' + (type ? ' show ' + type : '');
+  el.textContent = msg;
+}
+
+// NEW RECORD
+function newRecord() {
+  document.getElementById('successOverlay').classList.remove('show');
+  ['supplier','driver','orderNo','notes'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('itemRows').innerHTML = ''; itemCnt = 0; addItem();
+  photos = []; renderPhotos(); clearSig();
+  currentRecord = null;
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+let tTimer;
+function toast(msg) {
+  const t = document.getElementById('toast'); t.textContent = msg; t.className = 'show';
+  clearTimeout(tTimer); tTimer = setTimeout(() => { t.className = ''; }, 2500);
+}
+
+init();
+</script>
+</body>
+</html>
