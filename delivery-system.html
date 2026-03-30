@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>農場送貨簽收系統</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap');
+  :root {
+    --soil:#2C1810;--bark:#5C3D2E;--hay:#C9A84C;--hay-light:#F5E6BC;
+    --grass:#4A7C59;--grass-light:#7DB08A;--sky:#E8F4F0;
+    --cream:#FAF6EE;--smoke:#F0EDE6;--ink:#1A1208;--muted:#8A7560;
+    --border:#DDD5C0;--red:#C0392B;--blue:#1a73e8;--blue-light:#e8f0fe;
+    --shadow:0 2px 12px rgba(44,24,16,.10);--shadow-lg:0 8px 32px rgba(44,24,16,.15);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Noto Sans TC',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh}
+  header{background:var(--soil);position:sticky;top:0;z-index:100;box-shadow:0 2px 16px rgba(0,0,0,.25)}
+  .header-inner{max-width:940px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between}
+  .logo{display:flex;align-items:center;gap:10px}
+  .logo-icon{width:38px;height:38px;background:var(--hay);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px}
+  .logo-text h1{font-size:16px;font-weight:700;color:#fff;letter-spacing:1px}
+  .logo-text p{font-size:11px;color:var(--hay-light)}
+  .header-right{display:flex;align-items:center;gap:10px}
+  .header-date{font-family:'DM Mono',monospace;font-size:11px;color:var(--hay-light);text-align:right}
+  .g-btn{display:flex;align-items:center;gap:7px;padding:7px 13px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:inherit;transition:all .2s}
+  .g-btn.off{background:rgba(255,255,255,.13);color:#ddd}
+  .g-btn.off:hover{background:rgba(255,255,255,.22);color:#fff}
+  .g-btn.on{background:#1e7e3e;color:#fff}
+  .g-dot{width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.7}
+  nav{background:var(--bark);display:flex;overflow-x:auto}
+  nav::-webkit-scrollbar{display:none}
+  .nav-inner{max-width:940px;margin:0 auto;display:flex;width:100%}
+  .tab{padding:11px 22px;font-size:13px;font-weight:500;color:rgba(255,255,255,.65);cursor:pointer;border-bottom:3px solid transparent;transition:all .2s;white-space:nowrap;flex-shrink:0}
+  .tab:hover{color:#fff;background:rgba(255,255,255,.05)}
+  .tab.active{color:var(--hay);border-bottom-color:var(--hay);background:rgba(201,168,76,.1)}
+  main{max-width:940px;margin:0 auto;padding:24px 16px 60px}
+  .page{display:none}.page.active{display:block}
+  .card{background:#fff;border-radius:12px;border:1px solid var(--border);box-shadow:var(--shadow);padding:24px;margin-bottom:20px}
+  .card-title{font-size:13px;font-weight:700;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:18px;display:flex;align-items:center;gap:8px}
+  .card-title::before{content:'';display:inline-block;width:3px;height:14px;background:var(--hay);border-radius:2px}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:600px){.form-grid{grid-template-columns:1fr}}
+  .form-group{display:flex;flex-direction:column;gap:5px}
+  .form-group.full{grid-column:1/-1}
+  label{font-size:12px;font-weight:500;color:var(--muted)}
+  input,select,textarea{padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;color:var(--ink);background:var(--smoke);transition:border-color .2s,box-shadow .2s;outline:none}
+  input:focus,select:focus,textarea:focus{border-color:var(--hay);box-shadow:0 0 0 3px rgba(201,168,76,.15);background:#fff}
+  textarea{resize:vertical;min-height:70px}
+  .items-header{display:grid;grid-template-columns:2fr 1fr 1fr 36px;gap:8px;padding:0 0 6px;border-bottom:1px solid var(--border);margin-bottom:8px}
+  .items-header span{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px}
+  .item-row{display:grid;grid-template-columns:2fr 1fr 1fr 36px;gap:8px;align-items:center;margin-bottom:8px}
+  .item-row input{padding:8px 10px;font-size:13px}
+  .btn-rm{width:32px;height:32px;border:none;border-radius:6px;background:#fde8e8;color:var(--red);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s}
+  .btn-rm:hover{background:#f5b5b5}
+  .btn-add-item{margin-top:8px;padding:8px 14px;border:1.5px dashed var(--grass-light);border-radius:8px;background:none;color:var(--grass);font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;font-family:inherit}
+  .btn-add-item:hover{background:var(--sky);border-color:var(--grass)}
+  .photo-zone{border:2px dashed var(--border);border-radius:12px;padding:32px 20px;text-align:center;cursor:pointer;transition:all .2s;background:var(--smoke);position:relative}
+  .photo-zone:hover{border-color:var(--hay);background:var(--hay-light)}
+  .photo-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;border:none;background:none;padding:0}
+  .photo-zone-icon{font-size:36px;margin-bottom:8px}
+  .photo-zone-text{font-size:14px;color:var(--muted)}
+  .photo-zone-hint{font-size:12px;color:#b0a090;margin-top:4px}
+  .photo-preview-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px;margin-top:14px}
+  .photo-thumb{position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;border:2px solid var(--border)}
+  .photo-thumb img{width:100%;height:100%;object-fit:cover}
+  .photo-thumb .rm-ph{position:absolute;top:4px;right:4px;width:20px;height:20px;background:rgba(0,0,0,.6);color:#fff;border-radius:50%;border:none;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .sig-wrap{position:relative}
+  #sigCanvas{width:100%;height:140px;border:1.5px solid var(--border);border-radius:8px;background:var(--smoke);cursor:crosshair;display:block;touch-action:none}
+  #sigCanvas.signed{border-color:var(--grass);background:var(--sky)}
+  .sig-actions{display:flex;gap:8px;margin-top:8px}
+  .sig-hint{font-size:12px;color:var(--muted);position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;transition:opacity .3s}
+  .sig-hint.hidden{opacity:0}
+  .btn{padding:11px 22px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;border:none;font-family:inherit;transition:all .18s;display:inline-flex;align-items:center;gap:6px}
+  .btn-primary{background:var(--grass);color:#fff}
+  .btn-primary:hover{background:#3a6647;transform:translateY(-1px);box-shadow:0 4px 12px rgba(74,124,89,.3)}
+  .btn-secondary{background:var(--smoke);color:var(--muted);border:1.5px solid var(--border)}
+  .btn-secondary:hover{background:var(--border);color:var(--ink)}
+  .btn-danger{background:#fde8e8;color:var(--red);border:1.5px solid #f5c5c5}
+  .btn-danger:hover{background:#f5b5b5}
+  .btn-google{background:var(--blue);color:#fff}
+  .btn-google:hover{background:#1557b0;transform:translateY(-1px);box-shadow:0 4px 12px rgba(26,115,232,.3)}
+  .btn-google:disabled{background:#aaa;cursor:not-allowed;transform:none;box-shadow:none;opacity:.7}
+  .btn-sm{padding:7px 14px;font-size:12px}
+  .form-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:24px;padding-top:20px;border-top:1px solid var(--border);flex-wrap:wrap}
+  /* UPLOAD PAGE */
+  .setup-box{background:#fffbeb;border:1.5px solid #fde68a;border-radius:12px;padding:20px;margin-bottom:20px}
+  .setup-box h3{font-size:14px;color:#92400e;margin-bottom:10px}
+  .setup-box p{font-size:13px;color:#78350f;margin-bottom:12px;line-height:1.7}
+  .setup-row{display:flex;gap:8px;flex-wrap:wrap}
+  .setup-row input{flex:1;min-width:220px;font-family:'DM Mono',monospace;font-size:12px}
+  .login-needed{text-align:center;padding:20px;background:#fff8e1;border:1px dashed #fbbf24;border-radius:10px;font-size:13px;color:#7a5c00;margin-bottom:20px}
+  .login-needed strong{display:block;margin-bottom:6px;font-size:14px}
+  .upload-panel{background:var(--blue-light);border:1.5px solid #a8c7fa;border-radius:12px;padding:22px;margin-bottom:20px}
+  .upload-panel-title{font-size:14px;font-weight:700;color:#1344a0;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+  .up-row{display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+  .up-row label{font-size:12px;color:#1344a0;font-weight:600;white-space:nowrap}
+  .up-row input{padding:7px 10px;font-size:13px;flex:1;min-width:180px;background:#fff;border-color:#a8c7fa}
+  .up-section-label{font-size:12px;color:#1344a0;font-weight:600;margin-bottom:8px}
+  .up-options{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .up-opt{display:flex;align-items:center;gap:6px;padding:8px 14px;border:1.5px solid #a8c7fa;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;font-weight:500;color:#1a56db;transition:all .2s;user-select:none}
+  .up-opt input{display:none}
+  .up-opt.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+  .progress-wrap{display:none;margin-top:14px}
+  .progress-wrap.show{display:block}
+  .progress-track{background:#c8d8f8;border-radius:100px;height:8px;overflow:hidden;margin-bottom:6px}
+  .progress-bar{height:100%;background:var(--blue);border-radius:100px;transition:width .3s;width:0%}
+  .progress-lbl{font-size:12px;color:#1344a0}
+  /* STATS */
+  .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+  .stat-box{background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center;box-shadow:var(--shadow)}
+  .stat-num{font-family:'DM Mono',monospace;font-size:28px;font-weight:500;color:var(--soil)}
+  .stat-label{font-size:11px;color:var(--muted);margin-top:3px}
+  .filter-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
+  .filter-bar input{padding:8px 12px;font-size:13px;background:#fff;flex:1;min-width:160px}
+  .record-list{display:flex;flex-direction:column;gap:12px}
+  .rec-card{background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow);transition:box-shadow .2s}
+  .rec-card:hover{box-shadow:var(--shadow-lg)}
+  .rec-head{padding:14px 18px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;gap:12px}
+  .rec-head:hover{background:var(--smoke)}
+  .rec-id{font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);background:var(--smoke);padding:3px 8px;border-radius:4px;flex-shrink:0}
+  .rec-sup{font-size:15px;font-weight:600;color:var(--soil);flex:1}
+  .rec-date{font-size:12px;color:var(--muted);flex-shrink:0}
+  .rec-body{display:none;padding:0 18px 18px;border-top:1px solid var(--border)}
+  .rec-body.open{display:block}
+  .rec-item{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--border);font-size:13px}
+  .rec-item:last-child{border:none}
+  .rec-qty{font-family:'DM Mono',monospace;color:var(--muted)}
+  .rec-photos{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .rec-photo{width:80px;height:80px;border-radius:6px;object-fit:cover;border:2px solid var(--border);cursor:pointer;transition:transform .2s}
+  .rec-photo:hover{transform:scale(1.05)}
+  .rec-sig{margin-top:12px;background:var(--sky);border-radius:8px;padding:8px;border:1px solid var(--border)}
+  .rec-sig img{max-height:80px;display:block}
+  .rec-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center}
+  .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:100px;font-size:11px;font-weight:600}
+  .badge-g{background:#d4edda;color:#1d6a33}
+  .badge-b{background:var(--blue-light);color:var(--blue)}
+  .rec-actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+  /* TOAST */
+  #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--ink);color:#fff;padding:12px 22px;border-radius:100px;font-size:14px;z-index:9999;transition:transform .3s;pointer-events:none;white-space:nowrap}
+  #toast.show{transform:translateX(-50%) translateY(0)}
+  #toast.success{background:var(--grass)}
+  #toast.error{background:var(--red)}
+  #toast.info{background:var(--blue)}
+  /* LIGHTBOX */
+  #lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;align-items:center;justify-content:center}
+  #lightbox.open{display:flex}
+  #lightbox img{max-width:92vw;max-height:86vh;border-radius:8px}
+  #lightbox .lb-close{position:absolute;top:18px;right:22px;color:#fff;font-size:28px;cursor:pointer}
+  /* MODAL */
+  .modal-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center;padding:16px}
+  .modal-ov.open{display:flex}
+  .modal{background:#fff;border-radius:14px;padding:28px;max-width:480px;width:100%;box-shadow:var(--shadow-lg)}
+  .modal h3{font-size:17px;margin-bottom:16px;color:var(--soil)}
+  .modal p{font-size:14px;color:var(--muted);margin-bottom:20px;line-height:1.6}
+  .modal-actions{display:flex;gap:10px;justify-content:flex-end}
+  .required{color:var(--red);margin-left:2px}
+  .empty{text-align:center;padding:48px 20px;color:var(--muted)}
+  .empty-icon{font-size:48px;margin-bottom:12px}
+  .log-item{padding:10px 0;border-bottom:1px dashed var(--border);display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-icon">🐄</div>
+      <div class="logo-text">
+        <h1>農場送貨簽收系統</h1>
+        <p>Farm Delivery Receipt System</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="header-date" id="headerDate"></div>
+      <button class="g-btn off" id="gBtn" onclick="handleAuth()">
+        <span class="g-dot"></span><span id="gTxt">連接 Google</span>
+      </button>
+    </div>
+  </div>
+  <nav><div class="nav-inner">
+    <div class="tab active" onclick="switchTab('receive',this)">📦 新增送貨</div>
+    <div class="tab" onclick="switchTab('history',this)">📋 歷史記錄</div>
+    <div class="tab" onclick="switchTab('upload',this)">☁️ 上傳 Drive</div>
+    <div class="tab" onclick="switchTab('export',this)">📤 備份匯出</div>
+  </div></nav>
+</header>
+
+<main>
+
+<!-- RECEIVE -->
+<div class="page active" id="page-receive">
+  <div class="card">
+    <div class="card-title">送貨基本資訊</div>
+    <div class="form-grid">
+      <div class="form-group"><label>送貨廠商名稱 <span class="required">*</span></label><input type="text" id="supplierName" placeholder="例：台灣飼料股份有限公司"></div>
+      <div class="form-group"><label>送貨員姓名 <span class="required">*</span></label><input type="text" id="driverName" placeholder="送貨員姓名"></div>
+      <div class="form-group"><label>送貨日期 <span class="required">*</span></label><input type="date" id="deliveryDate"></div>
+      <div class="form-group"><label>送貨單號</label><input type="text" id="orderNo" placeholder="廠商送貨單號（選填）"></div>
+      <div class="form-group full"><label>備註</label><textarea id="notes" placeholder="貨品狀況、特殊說明…"></textarea></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">送貨品項</div>
+    <div class="items-header"><span>品項名稱</span><span>數量</span><span>單位</span><span></span></div>
+    <div id="itemRows"></div>
+    <button class="btn-add-item" onclick="addItem()">＋ 新增品項</button>
+  </div>
+  <div class="card">
+    <div class="card-title">商品照片</div>
+    <div class="photo-zone"><input type="file" id="photoInput" accept="image/*" multiple onchange="handlePhotos(this)"><div class="photo-zone-icon">📷</div><div class="photo-zone-text">點此拍照或上傳商品照片</div><div class="photo-zone-hint">支援 JPG、PNG，可多張</div></div>
+    <div class="photo-preview-grid" id="photoPreview"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">簽收確認</div>
+    <label style="margin-bottom:8px;display:block">送貨員簽名 <span class="required">*</span></label>
+    <div class="sig-wrap">
+      <canvas id="sigCanvas" width="800" height="140"></canvas>
+      <div class="sig-hint" id="sigHint">請在此區域簽名</div>
+    </div>
+    <div class="sig-actions"><button class="btn btn-secondary btn-sm" onclick="clearSig()">🗑 清除簽名</button></div>
+  </div>
+  <div class="form-actions">
+    <button class="btn btn-secondary" onclick="resetForm()">🔄 重置</button>
+    <button class="btn btn-primary" onclick="submitRecord()">✅ 儲存到本機</button>
+  </div>
+</div>
+
+<!-- HISTORY -->
+<div class="page" id="page-history">
+  <div class="stats-row">
+    <div class="stat-box"><div class="stat-num" id="statTotal">0</div><div class="stat-label">總筆數</div></div>
+    <div class="stat-box"><div class="stat-num" id="statMonth">0</div><div class="stat-label">本月筆數</div></div>
+    <div class="stat-box"><div class="stat-num" id="statSup">0</div><div class="stat-label">廠商數</div></div>
+  </div>
+  <div class="filter-bar">
+    <input type="text" id="searchQ" placeholder="🔍 搜尋廠商、品項…" oninput="renderHistory()">
+    <input type="month" id="filterM" onchange="renderHistory()" style="padding:8px 12px;font-size:13px;background:#fff">
+    <button class="btn btn-secondary btn-sm" onclick="clearFilters()">清除篩選</button>
+  </div>
+  <div class="record-list" id="recList"></div>
+</div>
+
+<!-- UPLOAD -->
+<div class="page" id="page-upload">
+  <div class="setup-box" id="setupBox">
+    <h3>⚙️ 第一次使用：填入 Google Client ID</h3>
+    <p>請依照說明申請 OAuth Client ID，貼入後點「儲存」，之後就不需要再填了。</p>
+    <div class="setup-row">
+      <input type="text" id="cidInput" placeholder="貼上 Client ID，例：123456789-xxx.apps.googleusercontent.com">
+      <button class="btn btn-primary btn-sm" onclick="saveCid()">儲存</button>
+    </div>
+  </div>
+  <div class="login-needed" id="loginBox" style="display:none">
+    <strong>🔐 請先登入 Google 帳號</strong>
+    點右上角「連接 Google」按鈕授權，即可上傳到你的 Google Drive。
+  </div>
+  <div class="upload-panel" id="uploadPanel" style="display:none">
+    <div class="upload-panel-title">☁️ 上傳到 Google Drive</div>
+    <div class="up-row">
+      <label>📁 Drive 資料夾：</label>
+      <input type="text" id="folderName" value="農場簽收記錄" placeholder="Drive 資料夾名稱">
+    </div>
+    <div class="up-section-label">上傳格式</div>
+    <div class="up-options">
+      <label class="up-opt on" id="optJSON"><input type="checkbox" checked onchange="toggleOpt(this,'optJSON')"> 📋 JSON 完整備份（含照片+簽名）</label>
+      <label class="up-opt on" id="optCSV"><input type="checkbox" checked onchange="toggleOpt(this,'optCSV')"> 📊 CSV 品項明細（Excel 可開）</label>
+    </div>
+    <div class="up-section-label">上傳範圍</div>
+    <div class="up-options">
+      <label class="up-opt" id="rangeAll" onclick="setRange('all',this)">全部記錄（<span id="cntAll">0</span> 筆）</label>
+      <label class="up-opt on" id="rangeMonth" onclick="setRange('month',this)">本月記錄（<span id="cntMonth">0</span> 筆）</label>
+    </div>
+    <button class="btn btn-google" id="upBtn" onclick="uploadDrive()">
+      ☁️ 上傳到 Google Drive
+    </button>
+    <div class="progress-wrap" id="progWrap">
+      <div class="progress-track"><div class="progress-bar" id="progBar"></div></div>
+      <div class="progress-lbl" id="progLbl">準備中…</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">上傳記錄</div>
+    <div id="upLog" style="font-size:13px;color:var(--muted)">尚無上傳記錄</div>
+  </div>
+</div>
+
+<!-- EXPORT -->
+<div class="page" id="page-export">
+  <div class="card">
+    <div class="card-title">本機下載備份</div>
+    <p style="font-size:14px;color:var(--muted);margin-bottom:18px;line-height:1.7">下載到電腦做本機備份。</p>
+    <div style="display:flex;gap:12px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="dlJSON()">⬇ 下載 JSON 完整備份</button>
+      <button class="btn btn-secondary" onclick="dlCSV()">📊 下載 CSV 品項明細</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">匯入備份還原</div>
+    <p style="font-size:14px;color:var(--muted);margin-bottom:14px;line-height:1.7">從 JSON 備份還原記錄。</p>
+    <input type="file" id="importFile" accept=".json" onchange="importJSON(this)" style="font-size:13px">
+  </div>
+  <div class="card">
+    <div class="card-title">危險區域</div>
+    <p style="font-size:14px;color:var(--muted);margin-bottom:14px">清除本機所有記錄，無法復原。</p>
+    <button class="btn btn-danger" onclick="confirmClear()">🗑 清除全部本機記錄</button>
+  </div>
+</div>
+
+</main>
+
+<div id="lightbox" onclick="closeLb()"><span class="lb-close">✕</span><img id="lbImg" src="" alt=""></div>
+<div class="modal-ov" id="modal">
+  <div class="modal">
+    <h3 id="mTitle"></h3><p id="mBody"></p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+      <button class="btn btn-danger" id="mOk">確認</button>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+// ── STATE ──────────────────────────────────────────
+let photos=[], records=[], gToken=null, gEmail='', uploadRange='month';
+const SK='farm_records', LK='farm_upload_log', CK='farm_cid';
+let itemCnt=0, drawing=false, hasSig=false, sigCtx, sigCanvas;
+
+// ── INIT ───────────────────────────────────────────
+function init(){
+  const now=new Date();
+  document.getElementById('headerDate').textContent=now.toLocaleDateString('zh-TW',{year:'numeric',month:'long',day:'numeric',weekday:'short'});
+  document.getElementById('deliveryDate').value=now.toISOString().slice(0,10);
+  try{records=JSON.parse(localStorage.getItem(SK)||'[]')}catch(e){}
+  const cid=localStorage.getItem(CK)||'';
+  if(cid){document.getElementById('cidInput').value=cid;document.getElementById('setupBox').style.display='none'}
+  addItem(); initSig(); renderHistory(); updateStats(); renderUpLog(); updateCounts();
+}
+
+// ── TABS ───────────────────────────────────────────
+function switchTab(tab,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+tab).classList.add('active');
+  el.classList.add('active');
+  if(tab==='history'){renderHistory();updateStats()}
+  if(tab==='upload'){updateUpPanel();updateCounts()}
+}
+
+// ── GOOGLE AUTH ────────────────────────────────────
+function getCid(){return localStorage.getItem(CK)||''}
+function saveCid(){
+  const v=document.getElementById('cidInput').value.trim();
+  if(!v){toast('請填入 Client ID','error');return}
+  localStorage.setItem(CK,v);
+  document.getElementById('setupBox').style.display='none';
+  toast('✅ Client ID 已儲存','success');
+}
+function handleAuth(){
+  if(gToken){showConfirm('登出 Google',`確定要登出 ${gEmail} 嗎？`,()=>{gToken=null;gEmail='';updateG(false);updateUpPanel();toast('已登出 Google')});return}
+  const cid=getCid();
+  if(!cid){toast('請先到「上傳 Drive」填入 Client ID','error');return}
+  try{
+    const client=google.accounts.oauth2.initTokenClient({
+      client_id:cid,
+      scope:'https://www.googleapis.com/auth/drive.file',
+      callback:async(r)=>{
+        if(r.access_token){
+          gToken=r.access_token;
+          try{const ui=await(await fetch('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{Authorization:'Bearer '+gToken}})).json();gEmail=ui.email||'Google 用戶'}catch(e){}
+          updateG(true);updateUpPanel();toast('✅ 已登入 '+gEmail,'success');
+        }else{toast('登入失敗：'+(r.error||'未知'),'error')}
+      }
+    });
+    client.requestAccessToken();
+  }catch(e){toast('Google 載入中，請稍後再試','error')}
+}
+function updateG(on){
+  const b=document.getElementById('gBtn');
+  b.className='g-btn '+(on?'on':'off');
+  document.getElementById('gTxt').textContent=on?(gEmail||'已連接'):'連接 Google';
+}
+function updateUpPanel(){
+  const hasCid=!!getCid();
+  document.getElementById('setupBox').style.display=hasCid?'none':'block';
+  document.getElementById('loginBox').style.display=(hasCid&&!gToken)?'block':'none';
+  document.getElementById('uploadPanel').style.display=(hasCid&&gToken)?'block':'none';
+}
+
+// ── UPLOAD ─────────────────────────────────────────
+function toggleOpt(cb,id){document.getElementById(id).classList[cb.checked?'add':'remove']('on')}
+function setRange(r,el){
+  uploadRange=r;
+  ['rangeAll','rangeMonth'].forEach(id=>document.getElementById(id).classList.remove('on'));
+  el.classList.add('on');
+}
+function updateCounts(){
+  const ym=new Date().toISOString().slice(0,7);
+  document.getElementById('cntAll').textContent=records.length;
+  document.getElementById('cntMonth').textContent=records.filter(r=>r.date.startsWith(ym)).length;
+}
+function getRangeData(){
+  if(uploadRange==='all')return records;
+  const ym=new Date().toISOString().slice(0,7);
+  return records.filter(r=>r.date.startsWith(ym));
+}
+function setProgress(p,lbl){
+  document.getElementById('progBar').style.width=p+'%';
+  document.getElementById('progLbl').textContent=lbl;
+}
+async function uploadDrive(){
+  if(!gToken){toast('請先登入 Google','error');return}
+  const doJ=document.querySelector('#optJSON input').checked;
+  const doC=document.querySelector('#optCSV input').checked;
+  if(!doJ&&!doC){toast('請至少選一種格式','error');return}
+  const folder=document.getElementById('folderName').value.trim()||'農場簽收記錄';
+  const data=getRangeData();
+  if(!data.length){toast('沒有可上傳的記錄','error');return}
+  const prog=document.getElementById('progWrap');
+  prog.classList.add('show');
+  document.getElementById('upBtn').disabled=true;
+  try{
+    setProgress(10,'建立資料夾…');
+    const fid=await getOrCreateFolder(folder);
+    const ts=new Date().toISOString().slice(0,16).replace('T','_').replace(':','');
+    const uploaded=[];
+    if(doJ){
+      setProgress(35,'上傳 JSON…');
+      await uploadFile(fid,`簽收備份_${ts}.json`,JSON.stringify(data,null,2),'application/json');
+      uploaded.push(`簽收備份_${ts}.json`);
+      setProgress(65,'JSON 完成');
+    }
+    if(doC){
+      setProgress(doJ?75:40,'上傳 CSV…');
+      await uploadFile(fid,`品項明細_${ts}.csv`,'\uFEFF'+buildCSV(data),'text/csv');
+      uploaded.push(`品項明細_${ts}.csv`);
+      setProgress(95,'CSV 完成');
+    }
+    setProgress(100,'✅ 上傳成功！');
+    addUpLog(uploaded,folder,data.length);
+    toast(`✅ 已上傳 ${uploaded.length} 個檔案到 Drive「${folder}」`,'success');
+    setTimeout(()=>{prog.classList.remove('show');document.getElementById('upBtn').disabled=false},2500);
+  }catch(e){
+    setProgress(0,'');prog.classList.remove('show');
+    document.getElementById('upBtn').disabled=false;
+    toast('上傳失敗：'+(e.message||'請確認授權'),'error');
+  }
+}
+async function getOrCreateFolder(name){
+  const q=encodeURIComponent(`name='${name}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+  const r=await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)`,{headers:{Authorization:'Bearer '+gToken}});
+  const d=await r.json();
+  if(d.files&&d.files.length)return d.files[0].id;
+  const cr=await fetch('https://www.googleapis.com/drive/v3/files',{method:'POST',headers:{Authorization:'Bearer '+gToken,'Content-Type':'application/json'},body:JSON.stringify({name,mimeType:'application/vnd.google-apps.folder'})});
+  const f=await cr.json();
+  if(!f.id)throw new Error('無法建立資料夾');
+  return f.id;
+}
+async function uploadFile(fid,name,content,mime){
+  const b='bound'+Date.now();
+  const meta=JSON.stringify({name,parents:[fid]});
+  const body=`--${b}\r\nContent-Type:application/json;charset=UTF-8\r\n\r\n${meta}\r\n--${b}\r\nContent-Type:${mime}\r\n\r\n${content}\r\n--${b}--`;
+  const r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',{method:'POST',headers:{Authorization:'Bearer '+gToken,'Content-Type':`multipart/related;boundary=${b}`},body});
+  const d=await r.json();
+  if(!d.id)throw new Error('上傳失敗：'+JSON.stringify(d));
+  return d.id;
+}
+function buildCSV(data){
+  let c='記錄編號,廠商,送貨員,日期,單號,品項,數量,單位,備註\n';
+  data.forEach(r=>{
+    if(r.items.length){r.items.forEach(i=>{c+=`"${r.id}","${r.supplier}","${r.driver}","${r.date}","${r.orderNo||''}","${i.name}","${i.qty}","${i.unit}","${r.notes||''}"\n`})}
+    else{c+=`"${r.id}","${r.supplier}","${r.driver}","${r.date}","${r.orderNo||''}","","","","${r.notes||''}"\n`}
+  });
+  return c;
+}
+function addUpLog(files,folder,count){
+  let logs=[];try{logs=JSON.parse(localStorage.getItem(LK)||'[]')}catch(e){}
+  logs.unshift({time:new Date().toISOString(),folder,count,files,user:gEmail});
+  if(logs.length>20)logs=logs.slice(0,20);
+  localStorage.setItem(LK,JSON.stringify(logs));
+  renderUpLog();
+}
+function renderUpLog(){
+  let logs=[];try{logs=JSON.parse(localStorage.getItem(LK)||'[]')}catch(e){}
+  const el=document.getElementById('upLog');
+  if(!logs.length){el.textContent='尚無上傳記錄';return}
+  el.innerHTML=logs.map(l=>`
+    <div class="log-item">
+      <span class="badge badge-b">☁️ ${l.files.length} 檔</span>
+      <div style="flex:1;min-width:180px">
+        <div style="font-weight:600;color:var(--ink);font-size:13px">📁 ${l.folder} — ${l.count} 筆</div>
+        <div style="color:var(--muted);font-size:12px;margin-top:2px">${l.files.join('、')}</div>
+        <div style="color:var(--muted);font-size:11px;margin-top:2px">${new Date(l.time).toLocaleString('zh-TW')} ∙ ${l.user||''}</div>
+      </div>
+    </div>`).join('');
+}
+
+// ── ITEMS ──────────────────────────────────────────
+function addItem(){
+  itemCnt++;const id=itemCnt;
+  const row=document.createElement('div');row.className='item-row';row.id='it-'+id;
+  row.innerHTML=`<input type="text" placeholder="品項名稱" class="it-name"><input type="number" placeholder="0" min="0" class="it-qty" style="text-align:center"><input type="text" placeholder="包/袋/公斤" class="it-unit"><button class="btn-rm" onclick="rmItem(${id})">✕</button>`;
+  document.getElementById('itemRows').appendChild(row);
+}
+function rmItem(id){const e=document.getElementById('it-'+id);if(e)e.remove()}
+function getItems(){
+  return Array.from(document.querySelectorAll('.item-row')).map(r=>({
+    name:r.querySelector('.it-name').value.trim(),
+    qty:r.querySelector('.it-qty').value.trim()||'—',
+    unit:r.querySelector('.it-unit').value.trim()||'—'
+  })).filter(i=>i.name);
+}
+
+// ── PHOTOS ─────────────────────────────────────────
+function handlePhotos(inp){
+  Array.from(inp.files).forEach(f=>{const r=new FileReader();r.onload=e=>{photos.push(e.target.result);renderPhotos()};r.readAsDataURL(f)});
+  inp.value='';
+}
+function renderPhotos(){
+  document.getElementById('photoPreview').innerHTML=photos.map((s,i)=>`<div class="photo-thumb"><img src="${s}" onclick="openLb('${s}')"><button class="rm-ph" onclick="rmPhoto(${i})">✕</button></div>`).join('');
+}
+function rmPhoto(i){photos.splice(i,1);renderPhotos()}
+
+// ── SIGNATURE ──────────────────────────────────────
+function initSig(){
+  sigCanvas=document.getElementById('sigCanvas');sigCtx=sigCanvas.getContext('2d');
+  sigCtx.strokeStyle='#2C1810';sigCtx.lineWidth=2.5;sigCtx.lineCap='round';sigCtx.lineJoin='round';
+  const gp=e=>{const r=sigCanvas.getBoundingClientRect(),sx=sigCanvas.width/r.width,sy=sigCanvas.height/r.height;return e.touches?{x:(e.touches[0].clientX-r.left)*sx,y:(e.touches[0].clientY-r.top)*sy}:{x:(e.clientX-r.left)*sx,y:(e.clientY-r.top)*sy}};
+  const start=e=>{e.preventDefault();drawing=true;const p=gp(e);sigCtx.beginPath();sigCtx.moveTo(p.x,p.y)};
+  const move=e=>{e.preventDefault();if(!drawing)return;const p=gp(e);sigCtx.lineTo(p.x,p.y);sigCtx.stroke();if(!hasSig){hasSig=true;sigCanvas.classList.add('signed');document.getElementById('sigHint').classList.add('hidden')}};
+  const end=()=>{drawing=false};
+  sigCanvas.addEventListener('mousedown',start);sigCanvas.addEventListener('mousemove',move);sigCanvas.addEventListener('mouseup',end);sigCanvas.addEventListener('mouseleave',end);
+  sigCanvas.addEventListener('touchstart',start,{passive:false});sigCanvas.addEventListener('touchmove',move,{passive:false});sigCanvas.addEventListener('touchend',end);
+}
+function clearSig(){sigCtx.clearRect(0,0,sigCanvas.width,sigCanvas.height);hasSig=false;sigCanvas.classList.remove('signed');document.getElementById('sigHint').classList.remove('hidden')}
+
+// ── SUBMIT ─────────────────────────────────────────
+function submitRecord(){
+  const sup=document.getElementById('supplierName').value.trim();
+  const drv=document.getElementById('driverName').value.trim();
+  const dt=document.getElementById('deliveryDate').value;
+  if(!sup){toast('請填寫廠商名稱','error');return}
+  if(!drv){toast('請填寫送貨員姓名','error');return}
+  if(!dt){toast('請選擇送貨日期','error');return}
+  if(!hasSig){toast('請完成簽名','error');return}
+  const items=getItems();
+  if(!items.length){toast('請至少填一個品項','error');return}
+  records.unshift({id:'DEL-'+Date.now(),supplier:sup,driver:drv,date:dt,orderNo:document.getElementById('orderNo').value.trim(),notes:document.getElementById('notes').value.trim(),items,photos:[...photos],signature:sigCanvas.toDataURL('image/png'),createdAt:new Date().toISOString()});
+  localStorage.setItem(SK,JSON.stringify(records));
+  toast('✅ 簽收記錄已儲存到本機！','success');
+  resetForm();updateStats();updateCounts();
+}
+function resetForm(){
+  ['supplierName','driverName','orderNo','notes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('deliveryDate').value=new Date().toISOString().slice(0,10);
+  document.getElementById('itemRows').innerHTML='';itemCnt=0;addItem();
+  photos=[];renderPhotos();clearSig();
+}
+
+// ── HISTORY ────────────────────────────────────────
+function renderHistory(){
+  const q=(document.getElementById('searchQ')?.value||'').toLowerCase();
+  const m=document.getElementById('filterM')?.value||'';
+  const list=document.getElementById('recList');
+  list.innerHTML='';
+  const filtered=records.filter(r=>(!q||(r.supplier+r.driver+(r.notes||'')+r.items.map(i=>i.name).join()).toLowerCase().includes(q))&&(!m||r.date.startsWith(m)));
+  if(!filtered.length){list.innerHTML='<div class="empty"><div class="empty-icon">📭</div><p>沒有符合的記錄</p></div>';return}
+  filtered.forEach(r=>{
+    const c=document.createElement('div');c.className='rec-card';
+    c.innerHTML=`
+      <div class="rec-head" onclick="this.nextElementSibling.classList.toggle('open')">
+        <span class="rec-id">${r.id}</span>
+        <span class="rec-sup">${r.supplier}</span>
+        <span class="rec-date">${r.date}</span>
+        <span>▾</span>
+      </div>
+      <div class="rec-body">
+        <div class="rec-meta"><span class="badge badge-g">✓ 已簽收</span><span style="font-size:12px;color:var(--muted)">送貨員：${r.driver}</span>${r.orderNo?`<span style="font-size:12px;color:var(--muted)">單號：${r.orderNo}</span>`:''}</div>
+        <div style="margin-top:10px">${r.items.map(i=>`<div class="rec-item"><span>${i.name}</span><span class="rec-qty">${i.qty} ${i.unit}</span></div>`).join('')}</div>
+        ${r.notes?`<div style="margin-top:10px;font-size:13px;color:var(--muted);background:var(--smoke);padding:8px 12px;border-radius:6px">備註：${r.notes}</div>`:''}
+        ${r.photos.length?`<div class="rec-photos">${r.photos.slice(0,4).map(p=>`<img class="rec-photo" src="${p}" onclick="openLb('${p}')">`).join('')}</div>`:''}
+        ${r.signature?`<div class="rec-sig"><div style="font-size:11px;color:var(--muted);margin-bottom:4px">簽名</div><img src="${r.signature}"></div>`:''}
+        <div class="rec-actions"><button class="btn btn-danger btn-sm" onclick="delRec('${r.id}')">🗑 刪除</button></div>
+      </div>`;
+    list.appendChild(c);
+  });
+}
+function delRec(id){showConfirm('刪除記錄','確定要刪除這筆記錄嗎？',()=>{records=records.filter(r=>r.id!==id);localStorage.setItem(SK,JSON.stringify(records));renderHistory();updateStats();updateCounts();toast('記錄已刪除')})}
+function clearFilters(){document.getElementById('searchQ').value='';document.getElementById('filterM').value='';renderHistory()}
+function updateStats(){
+  document.getElementById('statTotal').textContent=records.length;
+  const ym=new Date().toISOString().slice(0,7);
+  document.getElementById('statMonth').textContent=records.filter(r=>r.date.startsWith(ym)).length;
+  document.getElementById('statSup').textContent=new Set(records.map(r=>r.supplier)).size;
+}
+
+// ── EXPORT ─────────────────────────────────────────
+function dlJSON(){const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob([JSON.stringify(records,null,2)],{type:'application/json'})),download:`farm_${new Date().toISOString().slice(0,10)}.json`});a.click();toast('JSON 下載中','success')}
+function dlCSV(){const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob(['\uFEFF'+buildCSV(records)],{type:'text/csv;charset=utf-8'})),download:`farm_items_${new Date().toISOString().slice(0,10)}.csv`});a.click();toast('CSV 下載中','success')}
+function importJSON(inp){
+  const f=inp.files[0];if(!f)return;
+  const r=new FileReader();r.onload=e=>{
+    try{const d=JSON.parse(e.target.result);if(!Array.isArray(d))throw 1;
+      showConfirm('匯入確認',`確定匯入 ${d.length} 筆？（重複 ID 不覆蓋）`,()=>{
+        const ids=new Set(records.map(r=>r.id));const news=d.filter(r=>!ids.has(r.id));
+        records=[...news,...records];localStorage.setItem(SK,JSON.stringify(records));
+        renderHistory();updateStats();updateCounts();toast(`✅ 匯入 ${news.length} 筆`,'success');
+      });
+    }catch(e){toast('格式錯誤','error')}
+  };r.readAsText(f);inp.value='';
+}
+function confirmClear(){showConfirm('清除全部','確定清除所有本機記錄？請先備份！',()=>{records=[];localStorage.setItem(SK,'[]');renderHistory();updateStats();updateCounts();toast('已清除')})}
+
+// ── UI HELPERS ─────────────────────────────────────
+function openLb(src){document.getElementById('lbImg').src=src;document.getElementById('lightbox').classList.add('open')}
+function closeLb(){document.getElementById('lightbox').classList.remove('open')}
+let mCb=null;
+function showConfirm(title,body,cb){document.getElementById('mTitle').textContent=title;document.getElementById('mBody').textContent=body;mCb=cb;document.getElementById('modal').classList.add('open');document.getElementById('mOk').onclick=()=>{closeModal();if(mCb)mCb()}}
+function closeModal(){document.getElementById('modal').classList.remove('open')}
+let tTimer;
+function toast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.className=type?`show ${type}`:'show';clearTimeout(tTimer);tTimer=setTimeout(()=>{t.className=''},2800)}
+
+init();
+</script>
+</body>
+</html>
